@@ -1,3 +1,5 @@
+#include <unistd.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -13,7 +15,7 @@
 
 // Creatinng clint count global variable to check no of clients
 int clientCount = 0;
-
+pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 // Creating client structure for each client record
 struct client{
 	int index;
@@ -33,7 +35,7 @@ void * ChattingProcess(void * ClientDetail){
 	
 	// Getting client index and socket id
 	int index = clientDetail -> index;
-	int clientSocket = clientDetail -> socketID;
+	int clientSocket = clientDetail -> socketID;	
 	
 	printf("\033[1;32m [++] Client %d connected... \033[0m\n", index+1);
 	
@@ -63,20 +65,19 @@ void * ChattingProcess(void * ClientDetail){
 		printf("\n+++ CLIENT %d | client message : %s | client socket : %d\n",index+1, clientMsg, clientSocket);
 		
 		//if the message contains ':' delemeter then set CHAT = true;
-		char *ck;
-		ck = strstr(clientMsg,":");
-		if(strlen(&ck) != 0){
+
+		if(strstr(clientMsg, ":") != NULL){
 			CHAT = true;
 		}
-		
+
 		// user commands and actions
-		if(strcmp(clientMsg, "EXIT") == 0){
+		if(strstr(clientMsg, "EXIT") != NULL){
 			break;
 		}
-		else if(strcmp(clientMsg, "HELP") == 0){
+		else if(strstr(clientMsg, "HELP") != NULL){
 			strcpy(output, basicCommand);
 		}
-		else if(strcmp(clientMsg, "LIST") == 0){
+		else if(strstr(clientMsg, "LIST") != NULL){
 			int l = 0;
 			if(clientCount == 1){
 				l += sprintf(output + l, "\033[1;35m[res] Currently no other clients are connected...\n");
@@ -160,7 +161,6 @@ void * ChattingProcess(void * ClientDetail){
 		}
 		
 	}
-	
 	// making this client status DE-ACTIVE and closing its socket
 	stpcpy(clientDetail->status,DE_ACTIVE);
 	close(clientSocket);
@@ -168,7 +168,7 @@ void * ChattingProcess(void * ClientDetail){
 	return NULL;
 }
 
-int main(){
+int main(void){
 	// Creating the socket
 	int sock_desc = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock_desc < 0){
@@ -198,6 +198,7 @@ int main(){
 	printf("\033[1;33m [+] Listening for incoming connections... \033[0m\n");
 	
 	// Accept an incoming connections
+	pthread_mutex_lock(&mut);
 	while(clientCount < 10){
 		Client[clientCount].socketID = accept(sock_desc, (struct sockaddr*)&Client[clientCount].client_addr, &Client[clientCount].len);
 		Client[clientCount].index = clientCount;
@@ -205,12 +206,12 @@ int main(){
 		pthread_create(&thread[clientCount], NULL, ChattingProcess, (void*)&Client[clientCount]);
 		clientCount++;
 	}
-	
 	// pthread joining which waits for a thread to terminate, detaches the thread, then returns the thread exit status
 	for(int i = 0; i < clientCount; i++){
 		pthread_join(thread[i], NULL);
 	}
-	
+	pthread_mutex_unlock(&mut);
+
 	printf("\n\n---DONE---\n\n");
 	//closing the socket
 	close(sock_desc);

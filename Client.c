@@ -1,23 +1,26 @@
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <pthread.h>
 
+
 #define PORT 9000
 #define MAX 2000
+
 
 void * doReceving(void* socketID){
 	int fd = *((int*) socketID);
 	char server_message[MAX] ;
-	
+
 	while(1){
 		memset(server_message,'\0',sizeof(server_message));
 		
 		// Receive the server's response:
 		if(recv(fd, server_message, sizeof(server_message), 0) < 0){
 			printf("\033[1;31m [--] Error while receiving server's msg \033[0m\n");
-			return -1;
+			return 0;
 		}
 		
 		// printing the message
@@ -29,7 +32,6 @@ int main(void)
     int socket_desc;
     struct sockaddr_in server_addr;
     char client_message[MAX];
-    
     // Clean buffers:
 	memset(client_message,'\0',sizeof(client_message));
     
@@ -66,9 +68,9 @@ int main(void)
 		bzero(client_message, sizeof(client_message));
 		
 		// Get input from the user:
-		gets(client_message);
-		
-		if(strcmp(client_message, "EXIT")==0){
+		fgets(client_message, sizeof(client_message), stdin);	
+
+		if(strstr(client_message, "EXIT") != NULL){
 			// Send the message to server:
 			if(send(socket_desc, client_message, strlen(client_message), 0) < 0){
 				printf("\033[1;31m [--] Unable to send message \033[0m\n");
@@ -89,6 +91,6 @@ int main(void)
     // Close the socket:
     close(socket_desc);
 	printf("\033[1;31m[X] Socket is been closed... \033[0m\n\n");
-	//pthread_exit();
+	pthread_join(thread, NULL);
     return 0;
 }
