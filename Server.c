@@ -15,7 +15,6 @@
 
 // Creatinng clint count global variable to check no of clients
 int clientCount = 0;
-pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 // Creating client structure for each client record
 struct client{
 	int index;
@@ -58,7 +57,7 @@ void * ChattingProcess(void * ClientDetail){
 		bzero(output, sizeof(output));
 		
 		// receving client message
-		if(recv(clientSocket, clientMsg, sizeof(clientMsg), 0) < 0){
+		if(recv(clientSocket, clientMsg, sizeof(clientMsg), 0) <= 0){
 			printf("\033[1;33m [--] Couldn't receive client message... \033[0m\n");
 			break;
 		}
@@ -198,7 +197,6 @@ int main(void){
 	printf("\033[1;33m [+] Listening for incoming connections... \033[0m\n");
 	
 	// Accept an incoming connections
-	pthread_mutex_lock(&mut);
 	while(clientCount < 10){
 		Client[clientCount].socketID = accept(sock_desc, (struct sockaddr*)&Client[clientCount].client_addr, &Client[clientCount].len);
 		Client[clientCount].index = clientCount;
@@ -210,8 +208,6 @@ int main(void){
 	for(int i = 0; i < clientCount; i++){
 		pthread_join(thread[i], NULL);
 	}
-	pthread_mutex_unlock(&mut);
-
 	printf("\n\n---DONE---\n\n");
 	//closing the socket
 	close(sock_desc);
